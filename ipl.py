@@ -310,6 +310,7 @@ def scrape_ipl_scorecard(url):
                                 player_stats[resolved]['contributions']['fielding'].append(field_contrib)
                                 breakdown[resolved]['fielding']['contributions'].append(field_contrib)
                                 breakdown[resolved]['fielding']['score'] += a_params['catches']
+                                player_stats[resolved]['score'] += a_params['catches']
                             else:
                                 pending_fielding.append({
                                     'type': 'catch',
@@ -331,6 +332,7 @@ def scrape_ipl_scorecard(url):
                             player_stats[resolved]['contributions']['fielding'].append(field_contrib)
                             breakdown[resolved]['fielding']['contributions'].append(field_contrib)
                             breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']
+                            player_stats[resolved]['score'] += a_params['run_outs_stumpings']
                         else:
                             pending_fielding.append({
                                 'type': 'stumping',
@@ -351,6 +353,7 @@ def scrape_ipl_scorecard(url):
                             player_stats[resolved]['run_outs'] += 1
                             breakdown[resolved]['fielding']['run_outs'] += 1
                             breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']
+                            player_stats[resolved]['score'] += a_params['run_outs_stumpings']
                             field_contrib = {'type': 'run out', 'from': player, 'dismissal': dismissal_info}
                             player_stats[resolved]['contributions']['fielding'].append(field_contrib)
                             breakdown[resolved]['fielding']['contributions'].append(field_contrib)
@@ -468,6 +471,7 @@ def scrape_ipl_scorecard(url):
                     player_stats[resolved]['contributions']['fielding'].append(field_contrib)
                     breakdown[resolved]['fielding']['contributions'].append(field_contrib)
                     breakdown[resolved]['fielding']['score'] += a_params['catches']
+                    player_stats[resolved]['score'] += a_params['catches']
             elif event["type"] == "stumping":
                 player_stats[resolved]['stumpings'] += 1
                 if resolved in breakdown:
@@ -476,6 +480,7 @@ def scrape_ipl_scorecard(url):
                     player_stats[resolved]['contributions']['fielding'].append(field_contrib)
                     breakdown[resolved]['fielding']['contributions'].append(field_contrib)
                     breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']
+                    player_stats[resolved]['score'] += a_params['run_outs_stumpings']
             elif event["type"] == "run out":
                 player_stats[resolved]['run_outs'] += 1
                 if resolved in breakdown:
@@ -484,6 +489,7 @@ def scrape_ipl_scorecard(url):
                     player_stats[resolved]['contributions']['fielding'].append(field_contrib)
                     breakdown[resolved]['fielding']['contributions'].append(field_contrib)
                     breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']
+                    player_stats[resolved]['score'] += a_params['run_outs_stumpings']
         else:
             new_player = surname.title()
             init_player(new_player)
@@ -495,20 +501,23 @@ def scrape_ipl_scorecard(url):
                 player_stats[new_player]['contributions']['fielding'].append(field_contrib)
                 breakdown[new_player]['fielding']['contributions'].append(field_contrib)
                 breakdown[new_player]['fielding']['score'] += a_params['catches']
+                player_stats[new_player]['score'] += a_params['catches']
             elif event["type"] == "stumping":
                 player_stats[new_player]['stumpings'] += 1
                 breakdown[new_player]['fielding']['stumpings'] += 1
                 field_contrib = {'type': event["type"], 'from': event["from"], 'dismissal': event["dismissal"]}
                 player_stats[new_player]['contributions']['fielding'].append(field_contrib)
                 breakdown[new_player]['fielding']['contributions'].append(field_contrib)
-                breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']
+                breakdown[new_player]['fielding']['score'] += a_params['run_outs_stumpings']
+                player_stats[new_player]['score'] += a_params['run_outs_stumpings']
             elif event["type"] == "run out":
                 player_stats[new_player]['run_outs'] += 1
                 breakdown[new_player]['fielding']['run_outs'] += 1
                 field_contrib = {'type': event["type"], 'from': event["from"], 'dismissal': event["dismissal"]}
                 player_stats[new_player]['contributions']['fielding'].append(field_contrib)
                 breakdown[new_player]['fielding']['contributions'].append(field_contrib)
-                breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']
+                breakdown[new_player]['fielding']['score'] += a_params['run_outs_stumpings']
+                player_stats[new_player]['score'] += a_params['run_outs_stumpings']
     pending_fielding.clear()
 
     # ---------------------------
