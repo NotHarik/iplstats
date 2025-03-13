@@ -19,62 +19,64 @@ a_params = {
     "no_balls_bowled": -2,
     "not_out": 5,
     "fifty": 8,
-    "hundred": 8,
+    "hundred": 16,
     "four_wickets": 10,
     "player_of_match": 0
 }
 
 def f(economy_rate):
     x=economy_rate
-    if x<4:
-        return 16
-    elif x<5:
-        return 12
-    elif x<6:
-        return 10
-    elif x<7:
+    if x<3:
+        return 8
+    elif x<4:
         return 6
-    elif x<8:
+    elif x<5:
         return 2
-    elif x<9:
+    elif x<6:
         return 0
-    elif x<10:
+    elif x<7:
+        return 0
+    elif x<8:
         return -4
-    elif x<11:
+    elif x<9:
         return -6
-    elif x<12:
+    elif x<10:
         return -10
+    elif x<11:
+        return -12
+    elif x<12:
+        return -12
     else:
-        return -14
+        return -12
 
 def g(strike_rate):
     x=strike_rate
     if x<70 and x>0:
-        return -10
-    elif x<80:
-        return -10
-    elif x<100:
         return -8
-    elif x<110:
-        return -6
-    elif x<120:
+    elif x<80:
         return -4
-    elif x<130:
+    elif x<100:
         return -2
-    elif x<140:
+    elif x<110:
         return 0
-    elif x<150:
+    elif x<120:
         return 2
-    elif x<160:
+    elif x<130:
         return 4
-    elif x<180:
+    elif x<140:
         return 6
-    elif x<200:
+    elif x<150:
         return 8
-    elif x<240:
+    elif x<160:
         return 10
+    elif x<180:
+        return 10
+    elif x<200:
+        return 12
+    elif x<240:
+        return 12
     else:
-        return 16
+        return 12
 
 # ---------------------------
 # Helper to split names into first and last.
@@ -111,7 +113,7 @@ def init_player(player):
             'first_name': first,
             'last_name': last,
             'matches': 0,
-            'score': 0,
+            'score': 4,
             'runs': 0,
             'fours': 0,
             'sixes': 0,
@@ -254,8 +256,7 @@ def scrape_ipl_scorecard(url):
             breakdown[player]['batting']['fours'] += fours
             breakdown[player]['batting']['sixes'] += sixes
             
-            delta_score = (a_params['match_played'] +
-                           a_params['runs'] * runs +
+            delta_score = (a_params['runs'] * runs +
                            a_params['fours'] * fours +
                            a_params['sixes'] * sixes +
                            a_params['not_out'] * (0 if got_out else 1) +
