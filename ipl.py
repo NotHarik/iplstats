@@ -200,7 +200,7 @@ def scrape_ipl_scorecard(url):
                 'first_name': first,
                 'last_name': last,
                 'batting': {'matches': 0, 'runs': 0, 'fours': 0, 'sixes': 0, 'score': 0, 'contributions': []},
-                'bowling': {'matches': 0, 'wickets': 0, 'maidens': 0, 'dot_balls': 0, 'no balls': 0, 'score': 0, 'contributions': []},
+                'bowling': {'matches': 0, 'wickets': 0, 'maidens': 0, 'dot_balls': 0, 'no_balls': 0, 'score': 0, 'contributions': []},
                 'fielding': {'catches': 0, 'stumpings': 0, 'run_outs': 0, 'contributions': []}
             }
     
