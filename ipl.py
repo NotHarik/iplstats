@@ -356,7 +356,7 @@ def scrape_ipl_scorecard(url):
                             init_game_player(resolved)
                             player_stats[resolved]['run_outs'] += 1
                             breakdown[resolved]['fielding']['run_outs'] += 1
-                            breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']  * (2 if event["dro"] else 1)
+                            breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']  * (2 if DRO else 1)
                             player_stats[resolved]['score'] += a_params['run_outs_stumpings'] * (2 if DRO else 1)
                             field_contrib = {'type': 'run out', 'from': player, 'dismissal': dismissal_info}
                             player_stats[resolved]['contributions']['fielding'].append(field_contrib)
@@ -366,7 +366,7 @@ def scrape_ipl_scorecard(url):
                                 'type': 'run out',
                                 'from': player,
                                 'dismissal': dismissal_info,
-                                'fielder': raw_field
+                                'fielder': raw_field,
                                 'dro': DRO
                             })
     
@@ -531,7 +531,6 @@ def scrape_ipl_scorecard(url):
         if not breakdown[p].get('match_count_added', False):
             player_stats[p]['matches'] += 1
             breakdown[p]['match_count_added'] = True
-    print(breakdown)
     return breakdown
 
 # ---------------------------
@@ -605,6 +604,7 @@ def export_to_excel(player_stats, game_breakdowns, filename="IPL_Stats.xlsx"):
                     "Stumpings": data['fielding'].get('stumpings', 0),
                     "Run Outs": data['fielding'].get('run_outs', 0),
                     "Fielding Score": data['fielding']['score'],
+                    "Total Score": data['fielding']['score'] + data['batting']['score'] + data['bowling']['score'],
                     "POTM": data.get('potm', 0)
                 })
             game_df = pd.DataFrame(game_data)
