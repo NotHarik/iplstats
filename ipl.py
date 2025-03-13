@@ -26,57 +26,57 @@ a_params = {
 
 def f(economy_rate):
     x=economy_rate
-    if x<3:
-        return 8
-    elif x<4:
-        return 6
+    if x<4:
+        return 16
     elif x<5:
-        return 2
+        return 12
     elif x<6:
-        return 0
+        return 10
     elif x<7:
-        return 0
+        return 6
     elif x<8:
-        return -4
+        return 2
     elif x<9:
-        return -6
+        return 0
     elif x<10:
-        return -10
+        return -4
     elif x<11:
-        return -12
+        return -6
     elif x<12:
-        return -12
+        return -10
     else:
-        return -12
+        return -14
 
 def g(strike_rate):
     x=strike_rate
     if x<70 and x>0:
-        return -8
-    elif x<80:
-        return -4
-    elif x<100:
-        return -2
-    elif x<110:
+        return -10
+    elif x==0:
         return 0
+    elif x<80:
+        return -10
+    elif x<100:
+        return -8
+    elif x<110:
+        return -6
     elif x<120:
-        return 2
+        return -4
     elif x<130:
-        return 4
+        return -2
     elif x<140:
-        return 6
+        return 0
     elif x<150:
-        return 8
+        return 2
     elif x<160:
-        return 10
+        return 4
     elif x<180:
-        return 10
+        return 6
     elif x<200:
-        return 12
+        return 8
     elif x<240:
-        return 12
+        return 10
     else:
-        return 12
+        return 16
 
 # ---------------------------
 # Helper to split names into first and last.
@@ -472,7 +472,7 @@ def scrape_ipl_scorecard(url):
                     player_stats[resolved]['contributions']['fielding'].append(field_contrib)
                     breakdown[resolved]['fielding']['contributions'].append(field_contrib)
                     breakdown[resolved]['fielding']['score'] += a_params['catches']
-                    player_stats[resolved]['score'] += a_params['catches']
+                player_stats[resolved]['score'] += a_params['catches']
             elif event["type"] == "stumping":
                 player_stats[resolved]['stumpings'] += 1
                 if resolved in breakdown:
@@ -481,7 +481,7 @@ def scrape_ipl_scorecard(url):
                     player_stats[resolved]['contributions']['fielding'].append(field_contrib)
                     breakdown[resolved]['fielding']['contributions'].append(field_contrib)
                     breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']
-                    player_stats[resolved]['score'] += a_params['run_outs_stumpings']
+                player_stats[resolved]['score'] += a_params['run_outs_stumpings']
             elif event["type"] == "run out":
                 player_stats[resolved]['run_outs'] += 1
                 if resolved in breakdown:
@@ -490,7 +490,7 @@ def scrape_ipl_scorecard(url):
                     player_stats[resolved]['contributions']['fielding'].append(field_contrib)
                     breakdown[resolved]['fielding']['contributions'].append(field_contrib)
                     breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']
-                    player_stats[resolved]['score'] += a_params['run_outs_stumpings']
+                player_stats[resolved]['score'] += a_params['run_outs_stumpings']
         else:
             new_player = surname.title()
             init_player(new_player)
@@ -527,7 +527,7 @@ def scrape_ipl_scorecard(url):
         if not breakdown[p].get('match_count_added', False):
             player_stats[p]['matches'] += 1
             breakdown[p]['match_count_added'] = True
-
+    print(breakdown)
     return breakdown
 
 # ---------------------------
