@@ -90,6 +90,7 @@ def split_name(name):
 def clean_player_name(name):
     # Normalize apostrophes so that both ’ and ' become the same
     name = name.replace("’", "'")
+    name = name.replace("†", "")
     name = name.strip()
     # Remove any trailing parentheses and their contents (e.g., " (c)", " (sub ...)", " (wk)")
     name = re.sub(r'\s*\(.*?\)\s*$', '', name)
@@ -201,7 +202,7 @@ def scrape_ipl_scorecard(url):
                 'last_name': last,
                 'batting': {'matches': 0, 'runs': 0, 'fours': 0, 'sixes': 0, 'score': 0, 'contributions': []},
                 'bowling': {'matches': 0, 'wickets': 0, 'maidens': 0, 'dot_balls': 0, 'no_balls': 0, 'score': 0, 'contributions': []},
-                'fielding': {'catches': 0, 'stumpings': 0, 'run_outs': 0, 'contributions': []}
+                'fielding': {'catches': 0, 'stumpings': 0, 'run_outs': 0, 'score':0, 'contributions': []}
             }
     
     # ---------------------------
@@ -308,6 +309,7 @@ def scrape_ipl_scorecard(url):
                                 field_contrib = {'type': 'catch', 'from': player, 'dismissal': dismissal_info}
                                 player_stats[resolved]['contributions']['fielding'].append(field_contrib)
                                 breakdown[resolved]['fielding']['contributions'].append(field_contrib)
+                                breakdown[resolved]['fielding']['score'] += a_params['catches']
                             else:
                                 pending_fielding.append({
                                     'type': 'catch',
@@ -328,6 +330,7 @@ def scrape_ipl_scorecard(url):
                             field_contrib = {'type': 'stumping', 'from': player, 'dismissal': dismissal_info}
                             player_stats[resolved]['contributions']['fielding'].append(field_contrib)
                             breakdown[resolved]['fielding']['contributions'].append(field_contrib)
+                            breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']
                         else:
                             pending_fielding.append({
                                 'type': 'stumping',
@@ -347,6 +350,7 @@ def scrape_ipl_scorecard(url):
                             init_game_player(resolved)
                             player_stats[resolved]['run_outs'] += 1
                             breakdown[resolved]['fielding']['run_outs'] += 1
+                            breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']
                             field_contrib = {'type': 'run out', 'from': player, 'dismissal': dismissal_info}
                             player_stats[resolved]['contributions']['fielding'].append(field_contrib)
                             breakdown[resolved]['fielding']['contributions'].append(field_contrib)
@@ -445,7 +449,7 @@ def scrape_ipl_scorecard(url):
     # ---------------------------
     # Process pending fielding events.
     for event in pending_fielding:
-        surname = event["fielder"]
+        surname = event["fielder"].replace("†", "")
         candidate = None
         for key in player_stats.keys():
             _, last = split_name(key)
@@ -463,6 +467,7 @@ def scrape_ipl_scorecard(url):
                     field_contrib = {'type': event["type"], 'from': event["from"], 'dismissal': event["dismissal"]}
                     player_stats[resolved]['contributions']['fielding'].append(field_contrib)
                     breakdown[resolved]['fielding']['contributions'].append(field_contrib)
+                    breakdown[resolved]['fielding']['score'] += a_params['catches']
             elif event["type"] == "stumping":
                 player_stats[resolved]['stumpings'] += 1
                 if resolved in breakdown:
@@ -470,6 +475,7 @@ def scrape_ipl_scorecard(url):
                     field_contrib = {'type': event["type"], 'from': event["from"], 'dismissal': event["dismissal"]}
                     player_stats[resolved]['contributions']['fielding'].append(field_contrib)
                     breakdown[resolved]['fielding']['contributions'].append(field_contrib)
+                    breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']
             elif event["type"] == "run out":
                 player_stats[resolved]['run_outs'] += 1
                 if resolved in breakdown:
@@ -477,6 +483,7 @@ def scrape_ipl_scorecard(url):
                     field_contrib = {'type': event["type"], 'from': event["from"], 'dismissal': event["dismissal"]}
                     player_stats[resolved]['contributions']['fielding'].append(field_contrib)
                     breakdown[resolved]['fielding']['contributions'].append(field_contrib)
+                    breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']
         else:
             new_player = surname.title()
             init_player(new_player)
@@ -487,18 +494,21 @@ def scrape_ipl_scorecard(url):
                 field_contrib = {'type': event["type"], 'from': event["from"], 'dismissal': event["dismissal"]}
                 player_stats[new_player]['contributions']['fielding'].append(field_contrib)
                 breakdown[new_player]['fielding']['contributions'].append(field_contrib)
+                breakdown[new_player]['fielding']['score'] += a_params['catches']
             elif event["type"] == "stumping":
                 player_stats[new_player]['stumpings'] += 1
                 breakdown[new_player]['fielding']['stumpings'] += 1
                 field_contrib = {'type': event["type"], 'from': event["from"], 'dismissal': event["dismissal"]}
                 player_stats[new_player]['contributions']['fielding'].append(field_contrib)
                 breakdown[new_player]['fielding']['contributions'].append(field_contrib)
+                breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']
             elif event["type"] == "run out":
                 player_stats[new_player]['run_outs'] += 1
                 breakdown[new_player]['fielding']['run_outs'] += 1
                 field_contrib = {'type': event["type"], 'from': event["from"], 'dismissal': event["dismissal"]}
                 player_stats[new_player]['contributions']['fielding'].append(field_contrib)
                 breakdown[new_player]['fielding']['contributions'].append(field_contrib)
+                breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']
     pending_fielding.clear()
 
     # ---------------------------
@@ -580,6 +590,7 @@ def export_to_excel(player_stats, game_breakdowns, filename="IPL_Stats.xlsx"):
                     "Catches": data['fielding'].get('catches', 0),
                     "Stumpings": data['fielding'].get('stumpings', 0),
                     "Run Outs": data['fielding'].get('run_outs', 0),
+                    "Fielding Score": data['fielding']['score'],
                     "POTM": data.get('potm', 0)
                 })
             game_df = pd.DataFrame(game_data)
