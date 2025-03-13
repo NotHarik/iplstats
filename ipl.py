@@ -217,7 +217,10 @@ def scrape_ipl_scorecard(url):
             player = clean_player_name(raw_player)
             if player.lower() in ['extras', 'did not bat']:
                 continue
-
+            try:
+                balls = int(cols[3].text.strip()) if cols[2].text.strip().isdigit() else 0
+            except Exception:
+                balls = 0
             try:
                 runs = int(cols[2].text.strip()) if cols[2].text.strip().isdigit() else 0
             except Exception:
@@ -258,7 +261,7 @@ def scrape_ipl_scorecard(url):
                            a_params['duck'] * (1 if got_out and runs == 0 else 0) +
                            a_params['fifty'] * (1 if runs >= 50 else 0) +
                            a_params['hundred'] * (1 if runs >= 100 else 0) +
-                           g(strike_rate))
+                           g(strike_rate) * (1 if balls >= 5 else 0))
             player_stats[player]['score'] += delta_score
             breakdown[player]['batting']['score'] += delta_score
             
