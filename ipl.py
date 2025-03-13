@@ -120,6 +120,7 @@ def init_player(player):
             'catches': 0,
             'stumpings': 0,
             'run_outs': 0,
+            'no_balls': 0,
             'contributions': {
                 'batting': [],
                 'bowling': [],
@@ -199,7 +200,7 @@ def scrape_ipl_scorecard(url):
                 'first_name': first,
                 'last_name': last,
                 'batting': {'matches': 0, 'runs': 0, 'fours': 0, 'sixes': 0, 'score': 0, 'contributions': []},
-                'bowling': {'matches': 0, 'wickets': 0, 'maidens': 0, 'dot_balls': 0, 'score': 0, 'contributions': []},
+                'bowling': {'matches': 0, 'wickets': 0, 'maidens': 0, 'dot_balls': 0, 'no balls': 0, 'score': 0, 'contributions': []},
                 'fielding': {'catches': 0, 'stumpings': 0, 'run_outs': 0, 'contributions': []}
             }
     
@@ -385,22 +386,29 @@ def scrape_ipl_scorecard(url):
                 dot_balls = int(cols[6].text.strip())
             except Exception:
                 dot_balls = 0
+            try:
+                no_balls = int(cols[10].text.strip())
+            except Exception:
+                no_balls = 0
 
             init_player(player)
             init_game_player(player)
             player_stats[player]['wickets'] += wickets
             player_stats[player]['maidens'] += maidens
             player_stats[player]['dot_balls'] += dot_balls
+            player_stats[player]['no_balls'] += no_balls
             
             breakdown[player]['bowling']['matches'] += 1
             breakdown[player]['bowling']['wickets'] += wickets
             breakdown[player]['bowling']['maidens'] += maidens
             breakdown[player]['bowling']['dot_balls'] += dot_balls
+            breakdown[player]['bowling']['no_balls'] += no_balls
             
             delta_score = (a_params['wickets'] * wickets +
                            a_params['maidens'] * maidens +
                            a_params['dots_per_4'] * (math.floor(dot_balls / 4)) +
-                           a_params['four_wickets'] * (1 if wickets >= 4 else 0) +
+                           a_params['four_wickets'] * (1 if wickets >= 4 else 0) + 
+                           a_params['no_balls_bowled'] * no_balls +
                            f(economy))
             player_stats[player]['score'] += delta_score
             breakdown[player]['bowling']['score'] += delta_score
@@ -411,6 +419,7 @@ def scrape_ipl_scorecard(url):
                 'wickets': wickets,
                 'economy': economy,
                 'dot_balls': dot_balls,
+                'no_balls': no_balls,
                 'delta_score': delta_score
             }
             player_stats[player]['contributions']['bowling'].append(bowl_contrib)
@@ -515,6 +524,7 @@ def export_to_excel(player_stats, game_breakdowns, filename="IPL_Stats.xlsx"):
             "Total Wickets": stats.get('wickets', 0),
             "Total Maidens": stats.get('maidens', 0),
             "Total Dot Balls": stats.get('dot_balls', 0),
+            "Total No Balls": stats.get('no_balls',0),
             "Total Catches": stats.get('catches', 0),
             "Total Stumpings": stats.get('stumpings', 0),
             "Total Run Outs": stats.get('run_outs', 0)
@@ -536,6 +546,7 @@ def export_to_excel(player_stats, game_breakdowns, filename="IPL_Stats.xlsx"):
             "Average Wickets": stats.get('wickets', 0) / m,
             "Average Maidens": stats.get('maidens', 0) / m,
             "Average Dot Balls": stats.get('dot_balls', 0) / m,
+            "Average No Balls": stats.get('no_balls',0) / m,
             "Average Catches": stats.get('catches', 0) / m,
             "Average Stumpings": stats.get('stumpings', 0) / m,
             "Average Run Outs": stats.get('run_outs', 0) / m
@@ -561,6 +572,7 @@ def export_to_excel(player_stats, game_breakdowns, filename="IPL_Stats.xlsx"):
                     "Wickets": data['bowling']['wickets'],
                     "Maidens": data['bowling']['maidens'],
                     "Dot Balls": data['bowling']['dot_balls'],
+                    "No Balls": data['bowling']['no_balls'],
                     "Bowling Score": data['bowling']['score'],
                     "Catches": data['fielding'].get('catches', 0),
                     "Stumpings": data['fielding'].get('stumpings', 0),
