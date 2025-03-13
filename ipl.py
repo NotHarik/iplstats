@@ -342,19 +342,22 @@ def scrape_ipl_scorecard(url):
                                 'fielder': raw_field
                             })
                 elif "run out" in dismissal_info:
+                    DRO=False
                     m = re.search(r"run out\s*\(?([^)]*)\)?", dismissal_info)
                     if m:
                         raw_field = m.group(1).strip()
                         if "/" in raw_field:
                             raw_field = raw_field.split("/")[0].strip()
+                        else:
+                            DRO=True
                         if " " in raw_field:
                             resolved = resolve_player_name(raw_field)
                             init_player(resolved)
                             init_game_player(resolved)
                             player_stats[resolved]['run_outs'] += 1
                             breakdown[resolved]['fielding']['run_outs'] += 1
-                            breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']
-                            player_stats[resolved]['score'] += a_params['run_outs_stumpings']
+                            breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']  * (2 if event["dro"] else 1)
+                            player_stats[resolved]['score'] += a_params['run_outs_stumpings'] * (2 if DRO else 1)
                             field_contrib = {'type': 'run out', 'from': player, 'dismissal': dismissal_info}
                             player_stats[resolved]['contributions']['fielding'].append(field_contrib)
                             breakdown[resolved]['fielding']['contributions'].append(field_contrib)
@@ -364,6 +367,7 @@ def scrape_ipl_scorecard(url):
                                 'from': player,
                                 'dismissal': dismissal_info,
                                 'fielder': raw_field
+                                'dro': DRO
                             })
     
     # ---------------------------
@@ -489,8 +493,8 @@ def scrape_ipl_scorecard(url):
                     field_contrib = {'type': event["type"], 'from': event["from"], 'dismissal': event["dismissal"]}
                     player_stats[resolved]['contributions']['fielding'].append(field_contrib)
                     breakdown[resolved]['fielding']['contributions'].append(field_contrib)
-                    breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings']
-                player_stats[resolved]['score'] += a_params['run_outs_stumpings']
+                    breakdown[resolved]['fielding']['score'] += a_params['run_outs_stumpings'] * (2 if event["dro"] else 1)
+                player_stats[resolved]['score'] += a_params['run_outs_stumpings'] * (2 if event["dro"] else 1)
         else:
             new_player = surname.title()
             init_player(new_player)
@@ -517,8 +521,8 @@ def scrape_ipl_scorecard(url):
                 field_contrib = {'type': event["type"], 'from': event["from"], 'dismissal': event["dismissal"]}
                 player_stats[new_player]['contributions']['fielding'].append(field_contrib)
                 breakdown[new_player]['fielding']['contributions'].append(field_contrib)
-                breakdown[new_player]['fielding']['score'] += a_params['run_outs_stumpings']
-                player_stats[new_player]['score'] += a_params['run_outs_stumpings']
+                breakdown[new_player]['fielding']['score'] += a_params['run_outs_stumpings']  * (2 if event["dro"] else 1)
+                player_stats[new_player]['score'] += a_params['run_outs_stumpings']  * (2 if event["dro"] else 1)
     pending_fielding.clear()
 
     # ---------------------------
