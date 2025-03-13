@@ -533,9 +533,26 @@ def scrape_ipl_scorecard(url):
             breakdown[p]['match_count_added'] = True
     return breakdown
 
-# ---------------------------
-# Function to export global aggregated stats and game breakdowns to Excel.
 def export_to_excel(player_stats, game_breakdowns, filename="IPL_Stats.xlsx"):
+    import pandas as pd
+    
+    # Helper function to generate a friendlier sheet name from URL.
+    def get_sheet_name(url, default_index):
+        # Attempt to extract the match description from the URL.
+        parts = url.split('/')
+        if len(parts) > 5:
+            # e.g., "chennai-super-kings-vs-royal-challengers-bengaluru-1st-match-1422119"
+            raw_name = parts[5]
+            # Replace hyphens with spaces and title-case it.
+            name = raw_name.replace('-', ' ').title()
+            # Excel sheet names have a 31-character limit.
+            if len(name) > 31:
+                name = name[:31]
+            return name
+        else:
+            return f"Game_{default_index}"
+    
+    # Build Totals DataFrame.
     totals_data = []
     for player, stats in player_stats.items():
         totals_data.append({
@@ -550,13 +567,14 @@ def export_to_excel(player_stats, game_breakdowns, filename="IPL_Stats.xlsx"):
             "Total Wickets": stats.get('wickets', 0),
             "Total Maidens": stats.get('maidens', 0),
             "Total Dot Balls": stats.get('dot_balls', 0),
-            "Total No Balls": stats.get('no_balls',0),
+            "Total No Balls": stats.get('no_balls', 0),
             "Total Catches": stats.get('catches', 0),
             "Total Stumpings": stats.get('stumpings', 0),
             "Total Run Outs": stats.get('run_outs', 0)
         })
     totals_df = pd.DataFrame(totals_data)
     
+    # Build Per Match Averages DataFrame.
     per_match_data = []
     for player, stats in player_stats.items():
         m = stats['matches'] if stats['matches'] > 0 else 1
@@ -572,18 +590,69 @@ def export_to_excel(player_stats, game_breakdowns, filename="IPL_Stats.xlsx"):
             "Average Wickets": stats.get('wickets', 0) / m,
             "Average Maidens": stats.get('maidens', 0) / m,
             "Average Dot Balls": stats.get('dot_balls', 0) / m,
-            "Average No Balls": stats.get('no_balls',0) / m,
+            "Average No Balls": stats.get('no_balls', 0) / m,
             "Average Catches": stats.get('catches', 0) / m,
             "Average Stumpings": stats.get('stumpings', 0) / m,
             "Average Run Outs": stats.get('run_outs', 0) / m
         })
     per_match_df = pd.DataFrame(per_match_data)
     
+    # Build aggregated DataFrame for individual innings.
+    # This will contain every individual row from the match breakdowns,
+    # with an added column "Match" to indicate which match it came from.
+    all_innings_data = []
+    # Also build URL data for a dedicated sheet.
+    urls_data = []
+    
+    # Iterate over each match breakdown.
+    for i, (url, breakdown) in enumerate(game_breakdowns, start=1):
+        match_sheet_name = get_sheet_name(url, i)
+        urls_data.append({
+            "Match": match_sheet_name,
+            "URL": url
+        })
+        for player, data in breakdown.items():
+            # Prepare game-specific data.
+            innings = {
+                "Player": player,
+                "First Name": data.get('first_name', ''),
+                "Last Name": data.get('last_name', ''),
+                "Batting Matches": data['batting']['matches'],
+                "Runs": data['batting']['runs'],
+                "Fours": data['batting']['fours'],
+                "Sixes": data['batting']['sixes'],
+                "Batting Score": data['batting']['score'],
+                "Bowling Matches": data['bowling']['matches'],
+                "Wickets": data['bowling']['wickets'],
+                "Maidens": data['bowling']['maidens'],
+                "Dot Balls": data['bowling']['dot_balls'],
+                "No Balls": data['bowling']['no_balls'],
+                "Bowling Score": data['bowling']['score'],
+                "Catches": data['fielding'].get('catches', 0),
+                "Stumpings": data['fielding'].get('stumpings', 0),
+                "Run Outs": data['fielding'].get('run_outs', 0),
+                "Fielding Score": data['fielding']['score'],
+                "Total Score": data['fielding']['score'] + data['batting']['score'] + data['bowling']['score'],
+                "POTM": data.get('potm', 0),
+                "Match": match_sheet_name  # Added column to indicate match
+            }
+            all_innings_data.append(innings)
+    individual_df = pd.DataFrame(all_innings_data)
+    
+    # Create DataFrame for URLs.
+    urls_df = pd.DataFrame(urls_data)
+    
+    # Write all DataFrames to an Excel file with multiple sheets.
     with pd.ExcelWriter(filename, engine='openpyxl') as writer:
         totals_df.to_excel(writer, sheet_name="Totals", index=False)
         per_match_df.to_excel(writer, sheet_name="Per Match", index=False)
+        individual_df.to_excel(writer, sheet_name="Individual Innings", index=False)
+        urls_df.to_excel(writer, sheet_name="Match URLs", index=False)
+        
+        # Write each individual match breakdown as its own sheet.
         for i, (url, breakdown) in enumerate(game_breakdowns, start=1):
             game_data = []
+            match_sheet_name = get_sheet_name(url, i)
             for player, data in breakdown.items():
                 game_data.append({
                     "Player": player,
@@ -608,8 +677,7 @@ def export_to_excel(player_stats, game_breakdowns, filename="IPL_Stats.xlsx"):
                     "POTM": data.get('potm', 0)
                 })
             game_df = pd.DataFrame(game_data)
-            sheet_name = f"Game_{i}"
-            game_df.to_excel(writer, sheet_name=sheet_name, index=False)
+            game_df.to_excel(writer, sheet_name=match_sheet_name, index=False)
     
     print(f"Excel file '{filename}' has been created.")
 url_list=['https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/chennai-super-kings-vs-royal-challengers-bengaluru-1st-match-1422119/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/punjab-kings-vs-delhi-capitals-2nd-match-1422120/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/kolkata-knight-riders-vs-sunrisers-hyderabad-3rd-match-1422121/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/rajasthan-royals-vs-lucknow-super-giants-4th-match-1422122/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/gujarat-titans-vs-mumbai-indians-5th-match-1422123/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/royal-challengers-bengaluru-vs-punjab-kings-6th-match-1422124/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/chennai-super-kings-vs-gujarat-titans-7th-match-1422125/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/sunrisers-hyderabad-vs-mumbai-indians-8th-match-1422126/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/rajasthan-royals-vs-delhi-capitals-9th-match-1422127/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/royal-challengers-bengaluru-vs-kolkata-knight-riders-10th-match-1422128/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/lucknow-super-giants-vs-punjab-kings-11th-match-1422129/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/gujarat-titans-vs-sunrisers-hyderabad-12th-match-1422130/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/delhi-capitals-vs-chennai-super-kings-13th-match-1422131/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/mumbai-indians-vs-rajasthan-royals-14th-match-1422132/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/royal-challengers-bengaluru-vs-lucknow-super-giants-15th-match-1422133/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/delhi-capitals-vs-kolkata-knight-riders-16th-match-1422134/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/gujarat-titans-vs-punjab-kings-17th-match-1422135/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/sunrisers-hyderabad-vs-chennai-super-kings-18th-match-1422136/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/rajasthan-royals-vs-royal-challengers-bengaluru-19th-match-1422137/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/mumbai-indians-vs-delhi-capitals-20th-match-1422138/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/lucknow-super-giants-vs-gujarat-titans-21st-match-1422139/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/chennai-super-kings-vs-kolkata-knight-riders-22nd-match-1426260/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/punjab-kings-vs-sunrisers-hyderabad-23rd-match-1426261/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/rajasthan-royals-vs-gujarat-titans-24th-match-1426262/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/mumbai-indians-vs-royal-challengers-bengaluru-25th-match-1426263/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/lucknow-super-giants-vs-delhi-capitals-26th-match-1426264/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/punjab-kings-vs-rajasthan-royals-27th-match-1426265/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/kolkata-knight-riders-vs-lucknow-super-giants-28th-match-1426266/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/mumbai-indians-vs-chennai-super-kings-29th-match-1426267/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/royal-challengers-bengaluru-vs-sunrisers-hyderabad-30th-match-1426268/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/kolkata-knight-riders-vs-rajasthan-royals-31st-match-1426269/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/gujarat-titans-vs-delhi-capitals-32nd-match-1426270/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/punjab-kings-vs-mumbai-indians-33rd-match-1426271/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/lucknow-super-giants-vs-chennai-super-kings-34th-match-1426272/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/delhi-capitals-vs-sunrisers-hyderabad-35th-match-1426273/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/kolkata-knight-riders-vs-royal-challengers-bengaluru-36th-match-1426274/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/punjab-kings-vs-gujarat-titans-37th-match-1426275/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/rajasthan-royals-vs-mumbai-indians-38th-match-1426276/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/chennai-super-kings-vs-lucknow-super-giants-39th-match-1426277/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/delhi-capitals-vs-gujarat-titans-40th-match-1426278/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/sunrisers-hyderabad-vs-royal-challengers-bengaluru-41st-match-1426279/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/kolkata-knight-riders-vs-punjab-kings-42nd-match-1426280/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/delhi-capitals-vs-mumbai-indians-43rd-match-1426281/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/lucknow-super-giants-vs-rajasthan-royals-44th-match-1426282/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/gujarat-titans-vs-royal-challengers-bengaluru-45th-match-1426283/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/chennai-super-kings-vs-sunrisers-hyderabad-46th-match-1426284/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/kolkata-knight-riders-vs-delhi-capitals-47th-match-1426285/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/lucknow-super-giants-vs-mumbai-indians-48th-match-1426286/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/chennai-super-kings-vs-punjab-kings-49th-match-1426287/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/sunrisers-hyderabad-vs-rajasthan-royals-50th-match-1426288/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/mumbai-indians-vs-kolkata-knight-riders-51st-match-1426289/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/royal-challengers-bengaluru-vs-gujarat-titans-52nd-match-1426290/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/punjab-kings-vs-chennai-super-kings-53rd-match-1426291/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/lucknow-super-giants-vs-kolkata-knight-riders-54th-match-1426292/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/mumbai-indians-vs-sunrisers-hyderabad-55th-match-1426293/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/delhi-capitals-vs-rajasthan-royals-56th-match-1426294/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/sunrisers-hyderabad-vs-lucknow-super-giants-57th-match-1426295/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/punjab-kings-vs-royal-challengers-bengaluru-58th-match-1426296/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/gujarat-titans-vs-chennai-super-kings-59th-match-1426297/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/kolkata-knight-riders-vs-mumbai-indians-60th-match-1426298/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/chennai-super-kings-vs-rajasthan-royals-61st-match-1426299/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/royal-challengers-bengaluru-vs-delhi-capitals-62nd-match-1426300/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/delhi-capitals-vs-lucknow-super-giants-64th-match-1426302/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/rajasthan-royals-vs-punjab-kings-65th-match-1426303/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/mumbai-indians-vs-lucknow-super-giants-67th-match-1426305/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/royal-challengers-bengaluru-vs-chennai-super-kings-68th-match-1426306/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/sunrisers-hyderabad-vs-punjab-kings-69th-match-1426307/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/kolkata-knight-riders-vs-sunrisers-hyderabad-qualifier-1-1426309/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/rajasthan-royals-vs-royal-challengers-bengaluru-eliminator-1426310/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/rajasthan-royals-vs-sunrisers-hyderabad-qualifier-2-1426311/full-scorecard', 'https://www.espncricinfo.com/series/indian-premier-league-2024-1410320/kolkata-knight-riders-vs-sunrisers-hyderabad-final-1426312/full-scorecard']
